@@ -13,7 +13,14 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-var Version string = "unset"
+const appName = "prom-k8s-versions"
+
+var (
+	version = "unset"
+	commit  = "unset"
+	date    = "unset"
+)
+
 var (
 	showVersion    = kingpin.Flag("version", "Show version").Short('v').Bool()
 	debugLevel     = kingpin.Flag("debug", "Debug level logging").Short('d').Bool()
@@ -51,12 +58,17 @@ func setup() {
 	}
 }
 
+func printVersion() {
+	fmt.Printf("%s %s, commit %s, built %s\n", appName, version, commit, date)
+	os.Exit(0)
+}
+
 func main() {
 	setup()
 	if *showVersion {
-		fmt.Println(Version)
-		return
+		printVersion()
 	}
+
 	if !strings.HasPrefix(*promServer, "http") {
 		*promServer = "http://" + *promServer
 	}

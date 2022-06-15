@@ -12,7 +12,7 @@ before:
 
 builds:
   - id: all-builds
-    binary: bin/prom-k8s-versions-{{ .Os }}-{{ .Arch }}
+    binary: binaries/prom-k8s-versions-{{ .Os }}-{{ .Arch }}
     targets:
       - linux_amd64
       - linux_arm64
@@ -29,7 +29,7 @@ universal_binaries:
     # name_template: '{{.ProjectName}}_{{.Version}}'
 
 archives:
-  - name_template: "archive/{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     replacements:
       darwin: Darwin
       linux: Linux

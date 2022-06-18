@@ -44,8 +44,17 @@ func (pc *PromClient) SetTimeout(seconds int) *PromClient {
 	return pc
 }
 
-func (pc *PromClient) GetInfo(ns string, filter ClusterFilter) ClusterResultSet {
-	query := fmt.Sprintf(`{namespace="%s", __name__=~'kube_pod_container_info|kube_(deployment|daemonset|statefulset)_labels'}`, ns)
+func (pc *PromClient) GetInfo(ns string, filter *SearchFilter) ClusterResultSet {
+	metricsList := []string{
+		"kube_pod_container_info",
+		"kube_deployment_labels",
+		"kube_daemonset_labels",
+		"kube_statefulset_labels",
+	}
+	// if filter.IncludeConfigMaps {
+
+	// }
+	query := fmt.Sprintf(`{namespace="%s", __name__=~'%s'}`, ns, strings.Join(metricsList, "|"))
 	log.Debug().Msgf("Using prom query: %s", query)
 
 	ctx, cancel := context.WithTimeout(context.Background(), pc.timeout)
@@ -72,7 +81,7 @@ func (pc *PromClient) GetInfo(ns string, filter ClusterFilter) ClusterResultSet 
 		clusterName := labels["cluster_name"]
 
 		// apply filter
-		if !filter.Has(clusterName) {
+		if !filter.HasCluster(clusterName) {
 			log.Debug().Msgf("Skipping result for %s as it does not match filter", clusterName)
 			continue
 		}
@@ -222,23 +231,30 @@ func MetricLabels(m model.Metric) map[string]string {
 	return labels
 }
 
-type ClusterFilter map[string]*regexp.Regexp
-
-func (cf ClusterFilter) Empty() bool {
-	return len(cf) == 0
+type SearchFilter struct {
+	Clusters          map[string]*regexp.Regexp
+	IncludeConfigMaps bool
 }
 
-func (cf ClusterFilter) Add(name string) {
-	cf[name] = regexp.MustCompile(name)
+func NewSearchFilter() *SearchFilter {
+	return &SearchFilter{Clusters: map[string]*regexp.Regexp{}}
+}
+
+func (sf *SearchFilter) ClusterEmpty() bool {
+	return len(sf.Clusters) == 0
+}
+
+func (sf *SearchFilter) AddCluster(name string) {
+	sf.Clusters[name] = regexp.MustCompile(name)
 }
 
 // Has return True if there are no filters, or if there is at least one filter which matches name
-func (cf ClusterFilter) Has(name string) bool {
-	if cf.Empty() {
+func (sf *SearchFilter) HasCluster(name string) bool {
+	if sf.ClusterEmpty() {
 		return true
 	}
 
-	for _, pattern := range cf {
+	for _, pattern := range sf.Clusters {
 		if pattern.MatchString(name) {
 			return true
 		}

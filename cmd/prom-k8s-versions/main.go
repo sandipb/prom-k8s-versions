@@ -30,6 +30,7 @@ var (
 	timeoutSeconds = kingpin.Flag("timeout", "Timeout in seconds for the query").Short('t').Default("10").Int()
 	showPods       = kingpin.Flag("pods", "Show pods").Bool()
 	showDeploys    = kingpin.Flag("deploys", "Show deployments,daemonsets and statefulsets").Bool()
+	showCms        = kingpin.Flag("config-maps", "Show chart versions for configmaps as well").Bool()
 	showAll        bool
 )
 
@@ -76,16 +77,20 @@ func main() {
 	log.Debug().Msgf("Using prometheus server: %#v", *promServer)
 	log.Debug().Msgf("Searching in namespace: %#v", *namespace)
 
-	clusterFilter := prom.ClusterFilter{}
+	searchFilter := prom.NewSearchFilter()
 	if len(*clusters) > 0 {
 		log.Debug().Msgf("Filtering by clusters: %#v", *clusters)
 		for _, c := range *clusters {
-			clusterFilter.Add(c)
+			searchFilter.AddCluster(c)
 		}
 	}
 
+	if *showCms {
+		searchFilter.IncludeConfigMaps = true
+	}
+
 	client := prom.NewClient(*promServer).SetTimeout(*timeoutSeconds)
-	data := client.GetInfo(*namespace, clusterFilter)
+	data := client.GetInfo(*namespace, searchFilter)
 
 	if data.HasPods() && (showAll || *showPods) {
 		printPods(data)
